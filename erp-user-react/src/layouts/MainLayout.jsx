@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
+import Chat from '../components/Chat'
+// import ChatDebugger from '../components/ChatDebugger'
 
 const MainLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -38,6 +40,12 @@ const MainLayout = () => {
           <Outlet />
         </main>
       </div>
+      
+      {/* Chat Widget */}
+      <Chat />
+      
+      {/* Chat Connection Debugger */}
+      {/* <ChatDebugger /> */}
     </div>
   )
 }

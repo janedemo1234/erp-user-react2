@@ -1,9 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { FiClock, FiCalendar, FiUser, FiX } from 'react-icons/fi'
+import { FiClock, FiCalendar, FiUser, FiX, FiMessageCircle } from 'react-icons/fi'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserTie } from '@fortawesome/free-solid-svg-icons';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ isMobile, isOpen, onClose }) => {
+  const { unreadMessageCount } = useAuth();
+  
   if (isMobile && !isOpen) return null
   
   return (
@@ -103,6 +106,21 @@ const Sidebar = ({ isMobile, isOpen, onClose }) => {
             >
               <FiUser />
               <span>User Info</span>
+            </NavLink>
+            <NavLink 
+              to="/chat" 
+              className={({ isActive }) => 
+                `sidebar-link ${isActive ? 'active' : ''}`
+              }
+              onClick={isMobile ? onClose : undefined}
+            >
+              <FiMessageCircle />
+              <span>Team Chat</span>
+              {unreadMessageCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] text-center">
+                  {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+                </span>
+              )}
             </NavLink>
             <NavLink
                to="/resignation_view" 

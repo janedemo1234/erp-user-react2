@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import chatService from '../services/ChatService'
 
 const AuthContext = createContext()
 
@@ -14,6 +15,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [chatConnected, setChatConnected] = useState(false)
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('erpUser')
@@ -27,7 +30,94 @@ export const AuthProvider = ({ children }) => {
       }
     }
     setLoading(false)
+    
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        console.log('🔔 Notification permission:', permission);
+      });
+    }
   }, [])
+
+  // Monitor and sync with actual connection state
+  useEffect(() => {
+    const syncWithActualConnection = () => {
+      const actualConnectionState = chatService.stompClient?.connected || false;
+      if (actualConnectionState !== chatConnected) {
+        console.log('🔄 AuthContext: Syncing with actual connection state:', actualConnectionState);
+        setChatConnected(actualConnectionState);
+      }
+    };
+
+    // Add listener for immediate connection state changes
+    const handleConnectionChange = (isConnected) => {
+      console.log('📡 AuthContext: Received connection state change:', isConnected);
+      setChatConnected(isConnected);
+    };
+
+    // Handle new message notifications for unread count
+    const handleNewMessageNotification = (notification) => {
+      console.log('📩 AuthContext: New message notification received:', notification);
+      
+      // Only increment unread count if user is not currently on chat page
+      const currentPath = window.location.pathname;
+      const isOnChatPage = currentPath === '/chat';
+      
+      if (!isOnChatPage) {
+        setUnreadMessageCount(prev => {
+          const newCount = prev + 1;
+          console.log(`📊 AuthContext: Unread count updated from ${prev} to ${newCount}`);
+          return newCount;
+        });
+      }
+      
+      // Always show browser notification if permitted (even on chat page for other conversations)
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(`New message from ${notification.senderName || notification.senderSerialNumber || 'Unknown'}`, {
+          body: notification.content || 'New message received',
+          icon: '/vite.svg',
+          tag: `chat-${notification.senderSerialNumber}` // Prevent spam
+        });
+      }
+    };
+
+    chatService.addConnectionStateListener(handleConnectionChange);
+    chatService.addNotificationHandler(handleNewMessageNotification);
+
+    // Initial sync when user changes
+    if (user?.employeeSerialNumber) {
+      syncWithActualConnection();
+      
+      // If not connected, try to connect
+      if (!chatService.stompClient?.connected && !chatService.isConnecting) {
+        console.log('🚀 AuthContext: Initializing chat for user:', user.employeeSerialNumber);
+        initializeChatConnection();
+      }
+    }
+
+    // Periodic sync to catch state drift (fallback)
+    const syncInterval = setInterval(syncWithActualConnection, 2000);
+    
+    return () => {
+      clearInterval(syncInterval);
+      chatService.removeConnectionStateListener(handleConnectionChange);
+      chatService.removeNotificationHandler(handleNewMessageNotification);
+    };
+  }, [user, chatConnected])
+
+  const initializeChatConnection = async () => {
+    try {
+      if (user?.employeeSerialNumber && !chatService.stompClient?.connected && !chatService.isConnecting) {
+        console.log('🚀 AuthContext: Connecting chat service for user:', user.employeeSerialNumber)
+        await chatService.connect(user.employeeSerialNumber)
+        setChatConnected(chatService.stompClient?.connected || false)
+        console.log('✅ AuthContext: Chat connection attempt completed')
+      }
+    } catch (error) {
+      console.error('❌ AuthContext: Failed to initialize chat service:', error)
+      setChatConnected(false)
+    }
+  }
 
   const login = async (email, password) => {
     try {
@@ -100,6 +190,13 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = () => {
+    // Disconnect chat service on logout
+    if (chatService.stompClient && chatService.stompClient.connected) {
+      chatService.disconnect()
+      setChatConnected(false)
+      console.log('🔌 Chat service disconnected on logout')
+    }
+    
     // Clean up photo blob URL if it exists
     if (user?.photo && user.photo.startsWith('blob:')) {
       URL.revokeObjectURL(user.photo)
@@ -144,6 +241,49 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Function to clear unread message count
+  const clearUnreadMessages = () => {
+    console.log('📭 AuthContext: Clearing unread message count');
+    setUnreadMessageCount(0);
+  }
+
+  // Function to manually add to unread count (for debugging)
+  const addUnreadMessage = () => {
+    setUnreadMessageCount(prev => prev + 1);
+  }
+
+  // Function to test notifications
+  const testNotification = () => {
+    console.log('🧪 Testing notification system...');
+    console.log('📱 Notification permission:', Notification.permission);
+    
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification('Test Notification', {
+          body: 'This is a test notification from ERP Chat',
+          icon: '/vite.svg',
+          tag: 'test-notification'
+        });
+        console.log('✅ Test notification sent');
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          console.log('🔔 Permission result:', permission);
+          if (permission === 'granted') {
+            new Notification('Test Notification', {
+              body: 'Notifications are now enabled!',
+              icon: '/vite.svg',
+              tag: 'test-notification'
+            });
+          }
+        });
+      } else {
+        console.log('❌ Notifications are blocked');
+      }
+    } else {
+      console.log('❌ Notifications not supported');
+    }
+  }
+
   const value = {
     user,
     loading,
@@ -152,7 +292,13 @@ export const AuthProvider = ({ children }) => {
     logout,
     getEmployeeSerialNumber,
     isAuthenticated,
-    refreshUserPhoto
+    refreshUserPhoto,
+    chatConnected,
+    initializeChatConnection,
+    unreadMessageCount,
+    clearUnreadMessages,
+    addUnreadMessage,
+    testNotification
   }
 
   return (

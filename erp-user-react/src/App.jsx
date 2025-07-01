@@ -8,6 +8,7 @@ import ApplyLeave from './pages/ApplyLeave'
 import HolidayList from './pages/HolidayList'
 import CalendarView from './pages/CalendarView'
 import ResignationView from './pages/ResignationView'
+import ChatPage from './pages/ChatPage'
 import Login from './pages/Login'
 import { AttendanceProvider } from './context/AttendanceContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -51,6 +52,7 @@ const AppRoutes = () => {
           <Route path="calendar_view" element={<CalendarView />} />
           <Route path="holiday_list" element={<HolidayList />} />
           <Route path="user-info" element={<UserInfo />} />
+          <Route path="chat" element={<ChatPage />} />
           <Route path="resignation_view" element={<ResignationView />} />
         </Route>
       </Routes>

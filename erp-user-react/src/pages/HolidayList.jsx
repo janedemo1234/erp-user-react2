@@ -199,7 +199,7 @@ const HolidayList = () => {
                   <table className="min-w-full">
                     <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                       <tr>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">#</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">sl no</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Day</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Holiday Name</th>

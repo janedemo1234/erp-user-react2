@@ -218,6 +218,25 @@ const Regularization = () => {
       setIsEditing(false);
     }
   }, [location.state]);
+  
+  // Check if user came late on a specific date (after 10:15 AM)
+  const checkIfLateOnDate = (dateStr) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Only restrict for today's date
+    if (dateStr !== today) {
+      return false;
+    }
+    
+    // Check if current time is after 10:15 AM
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+    const lateTimeLimit = 10 * 60 + 15; // 10:15 AM in minutes
+    
+    return currentTimeInMinutes > lateTimeLimit;
+  };
 
   // Fetch attendance data and pending regularizations on component mount
   useEffect(() => {
@@ -447,13 +466,27 @@ const Regularization = () => {
                               <span>Pending for approval</span>
                             </span>
                           ) : (
-                            <button
-                              onClick={() => handleRequestRegularization(entry.date)}
-                              className="text-blue-600 hover:underline flex items-center space-x-1"
-                            >
-                              <Edit size={16} />
-                              <span>Regularize</span>
-                            </button>
+                            checkIfLateOnDate(entry.date) ? (
+                              <div className="flex flex-col">
+                                <button
+                                  disabled
+                                  className="text-gray-400 cursor-not-allowed flex items-center space-x-1"
+                                  title="Cannot regularize same day after 10:15 AM"
+                                >
+                                  <Edit size={16} />
+                                  <span>Regularize</span>
+                                </button>
+                               
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleRequestRegularization(entry.date)}
+                                className="text-blue-600 hover:underline flex items-center space-x-1"
+                              >
+                                <Edit size={16} />
+                                <span>Regularize</span>
+                              </button>
+                            )
                           )
                         )}
                       {(entry.status === 'pending' || entry.status === 'approved') && (
@@ -532,7 +565,10 @@ const Regularization = () => {
                 <select
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isLateAttendance} // Disable for late attendance
+                  className={`w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    isLateAttendance ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
                   required
                 >
                   <option value="">Select a reason</option>
@@ -542,6 +578,9 @@ const Regularization = () => {
                     </option>
                   ))}
                 </select>
+                {isLateAttendance && (
+                  <p className="text-xs text-gray-500 mt-1">Auto-selected for late attendance</p>
+                )}
               </div>
             </div>
 
